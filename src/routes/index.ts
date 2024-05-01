@@ -5,6 +5,6 @@ import { auth } from "../auth.js";
 
 const router = Router();
 router.use("/api/players", auth, playerRouter);
-router.use("/api/users/", userRouter);
+router.use("/api/users", userRouter);
 
 export default router;

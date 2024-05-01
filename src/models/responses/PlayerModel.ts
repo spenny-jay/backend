@@ -1,3 +1,4 @@
+// related to /api/players/player/:id
 export type PlayerModel = {
   ATT: number;
   CMP: number;
