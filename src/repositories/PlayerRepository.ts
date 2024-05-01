@@ -1,14 +1,7 @@
-import {
-  DynamoDBDocumentClient,
-  GetCommand,
-  ScanCommand,
-} from "@aws-sdk/lib-dynamodb";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { NameModel } from "./models/NameModel";
-import { PlayerModel } from "./models/PlayerModel";
-
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import docClient from "./AWSClients";
+import { NameModel } from "../models/NameModel";
+import { PlayerModel } from "../models/PlayerModel";
 
 export async function getPlayer(
   id: string,
