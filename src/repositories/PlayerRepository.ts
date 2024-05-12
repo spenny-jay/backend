@@ -2,6 +2,7 @@ import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import docClient from "./AWSClients";
 import { NameModel } from "../models/responses/NameModel";
 import { PlayerModel } from "../models/responses/PlayerModel";
+import { StatsModel } from "../models/responses/StatsModel";
 
 const PLAYERS_TABLE = "qb_stats";
 class PlayerRepository {
@@ -19,22 +20,23 @@ class PlayerRepository {
     id: string,
     startYear: number = 0,
     endYear: number = 9999
-  ): Promise<Array<PlayerModel>> {
+  ): Promise<PlayerModel> {
     const command = new GetCommand({
       TableName: PLAYERS_TABLE,
       Key: {
         Id: id,
       },
     });
-
     try {
       const response = await docClient.send(command);
-      const filteredStats: PlayerModel[] = response.Item.Stats.filter(
+      const filteredStats = response.Item.Stats.filter(
         (stat) => startYear <= stat.Year && endYear >= stat.Year
       );
 
+      // if a player was on multiple teams in on year,
+      // combine the stats into one year
       let prevYear = 0;
-      var combinedStats: PlayerModel[] = [];
+      const combinedStats: StatsModel[] = [];
       filteredStats.forEach((stat, i) => {
         if (prevYear === stat.Year) {
           let prevStats = combinedStats[i - 1];
@@ -59,7 +61,15 @@ class PlayerRepository {
         prevYear = stat.Year;
       });
 
-      return combinedStats;
+      const player: PlayerModel = {
+        "Current Team": response.Item["Current Team"],
+        Id: response.Item.Id,
+        Key: response.Item.Key,
+        Player: response.Item.Player,
+        Stats: combinedStats,
+      };
+
+      return player;
     } catch (e) {
       console.log(e);
       throw e;

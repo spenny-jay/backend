@@ -13,7 +13,7 @@ playerRouter.get("/player/:id", async (req: Request, res: Response) => {
   const startYear: number = req.query.startYear;
   const endYear: number = req.query.endYear;
   try {
-    const player: PlayerModel[] = await playerRepo.getPlayer(
+    const player: PlayerModel = await playerRepo.getPlayer(
       id,
       startYear,
       endYear
