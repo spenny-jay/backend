@@ -1,5 +1,5 @@
 import { UserRequest } from "../models/requests/UserRequest";
-import docClient from "./AWSClients";
+import { docClient } from "./AWSClients";
 import { PutItemCommand, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import bcrypt from "bcrypt";
 
@@ -50,6 +50,14 @@ class UserRepository {
     });
 
     const response = await docClient.send(command);
+    console.log(response);
+    if (!response.Item) {
+      console.log(
+        "Invalid username and password combination for user: " + username
+      );
+      return false;
+    }
+
     const hashedPassword = response.Item.password.S;
     const isPasswordRight = bcrypt.compareSync(password, hashedPassword);
 

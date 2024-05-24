@@ -6,13 +6,15 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./built/app",
-    "debug": "nodemon ./src/app"
+    "debug": "nodemon ./src/app.ts"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.556.0",
+    "@aws-sdk/client-s3": "^3.574.0",
     "@aws-sdk/lib-dynamodb": "^3.556.0",
+    "@aws-sdk/s3-request-presigner": "^3.574.0",
     "aws-sdk": "^2.1605.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",

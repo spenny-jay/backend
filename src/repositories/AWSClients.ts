@@ -1,8 +1,19 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// stores a DynamoDB client
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const dbClient = new DynamoDBClient({});
 
-export default docClient;
+export const docClient = DynamoDBDocumentClient.from(dbClient);
+
+export const s3Client = new S3Client({});
+
+export async function getPresignedURL(key: string): Promise<string> {
+  const getObjectParams = {
+    Bucket: "player-profiles",
+    Key: key,
+  };
+  const command = new GetObjectCommand(getObjectParams);
+  return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}

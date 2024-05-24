@@ -1,5 +1,5 @@
 import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
-import docClient from "./AWSClients";
+import { docClient, getPresignedURL } from "./AWSClients";
 import { NameModel } from "../models/responses/NameModel";
 import { PlayerModel } from "../models/responses/PlayerModel";
 import { StatsModel } from "../models/responses/StatsModel";
@@ -12,15 +12,10 @@ class PlayerRepository {
    * Gets an individual player and filters data on the provided
    * start and end year
    * @param id id of a player
-   * @param startYear (optional)
-   * @param endYear (optional)
+
    * @returns List of stats between the provided years for a player
    */
-  public async getPlayer(
-    id: string,
-    startYear: number = 0,
-    endYear: number = 9999
-  ): Promise<PlayerModel> {
+  public async getPlayer(id: string): Promise<PlayerModel> {
     const command = new GetCommand({
       TableName: PLAYERS_TABLE,
       Key: {
@@ -29,15 +24,12 @@ class PlayerRepository {
     });
     try {
       const response = await docClient.send(command);
-      const filteredStats = response.Item.Stats.filter(
-        (stat) => startYear <= stat.Year && endYear >= stat.Year
-      );
 
       // if a player was on multiple teams in on year,
       // combine the stats into one year
       let prevYear = 0;
       const combinedStats: StatsModel[] = [];
-      filteredStats.forEach((stat, i) => {
+      response.Item.Stats.forEach((stat, i) => {
         if (prevYear === stat.Year) {
           let prevStats = combinedStats[i - 1];
           prevStats.ATT = stat.ATT + prevStats.ATT;
@@ -64,14 +56,12 @@ class PlayerRepository {
       const player: PlayerModel = {
         "Current Team": response.Item["Current Team"],
         Id: response.Item.Id,
-        Key: response.Item.Key,
+        ProfileUrl: await getPresignedURL(response.Item.Key),
         Player: response.Item.Player,
         Stats: combinedStats,
       };
-
       return player;
     } catch (e) {
-      console.log(e);
       throw e;
     }
   }

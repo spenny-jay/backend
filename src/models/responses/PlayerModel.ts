@@ -4,6 +4,6 @@ export type PlayerModel = {
   "Current Team": string;
   Player: string;
   Id: string;
-  Key: string;
+  ProfileUrl: string;
   Stats: StatsModel[];
 };
