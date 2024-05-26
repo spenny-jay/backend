@@ -54,7 +54,7 @@ class PlayerRepository {
       });
 
       const player: PlayerModel = {
-        "Current Team": response.Item["Current Team"],
+        CurrentTeam: response.Item["Current Team"],
         Id: response.Item.Id,
         ProfileUrl: await getPresignedURL(response.Item.Key),
         Player: response.Item.Player,
@@ -108,5 +108,7 @@ class PlayerRepository {
     return response.Items as Array<NameModel>;
   }
 }
+
+new PlayerRepository().getPlayer("595550d3-4845-442c-a6b2-cb7f8c0a5fdc");
 
 export default PlayerRepository;
