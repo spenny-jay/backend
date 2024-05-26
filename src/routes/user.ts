@@ -12,29 +12,32 @@ router.post("/signup", async (req: Request, res: Response) => {
 
   const isUsernameValid = await validateUsername(username);
   if (!isUsernameValid) {
-    res.status(400).send({
+    return res.status(400).send({
       message: "Invalid username, must be unique and at least 8 characters",
     });
-    return;
   }
 
   const isPasswordValid = validatePassword(password);
   if (!isPasswordValid) {
-    res.status(400).send({
+    return res.status(400).send({
       message:
         "Invalid password, must be at least 8 characters and have 1 special character",
     });
-    return;
   }
 
   try {
-    await userRepo.signUp({ username, password });
+    const hasSignedUp: boolean = await userRepo.signUp(username, password);
+    if (!hasSignedUp) {
+      return res
+        .status(500)
+        .send({ message: "Failed to interact with users table" });
+    }
     const token = issueToken(username);
     res.status(200).send({
       token: token,
     });
   } catch {
-    res.status(400).send({
+    res.status(500).send({
       message: "Unable to signup user and/or issue token",
     });
   }
@@ -43,17 +46,18 @@ router.post("/signup", async (req: Request, res: Response) => {
 router.post("/login", async (req: Request, res: Response) => {
   const username = req.body.username;
   const password = req.body.password;
-  const isLoggedIn = await userRepo.logIn(username, password);
-  if (isLoggedIn) {
+  const userId: string = await userRepo.logIn(username, password);
+  if (userId) {
     const token = issueToken(username);
-    res.status(200).send({
+    return res.status(200).send({
       token: token,
-    });
-  } else {
-    res.status(400).send({
-      message: "Invalid username/password",
+      userId: userId,
     });
   }
+
+  res.status(400).send({
+    message: "Invalid username/password",
+  });
 });
 
 /**

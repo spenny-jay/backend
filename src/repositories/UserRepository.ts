@@ -1,4 +1,4 @@
-import { UserRequest } from "../models/requests/UserRequest";
+import { randomUUID } from "crypto";
 import { docClient } from "./AWSClients";
 import { PutItemCommand, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import bcrypt from "bcrypt";
@@ -13,9 +13,7 @@ class UserRepository {
    * @param userReq
    * @returns boolean whether the function successfully added a user
    */
-  public async signUp(userReq: UserRequest): Promise<void> {
-    const username = userReq.username;
-    const password = userReq.password;
+  public async signUp(username: string, password: string): Promise<boolean> {
     try {
       const hashedPassword = await bcrypt.hash(password, 8);
       const command = new PutItemCommand({
@@ -23,14 +21,16 @@ class UserRepository {
         Item: {
           username: { S: username },
           password: { S: hashedPassword },
+          userId: { S: randomUUID() },
         },
       });
 
       await docClient.send(command);
       console.log("Signed up user: " + username);
+      return true;
     } catch (e) {
       console.log("Error encountered when signing up user: " + username);
-      throw e;
+      return false;
     }
   }
 
@@ -40,34 +40,36 @@ class UserRepository {
    * @param password
    * @returns user data for the given username
    */
-  public async logIn(username: string, password: string): Promise<Boolean> {
+  public async logIn(username: string, password: string): Promise<string> {
     const command = new GetItemCommand({
       TableName: USERS_TABLE,
       Key: {
         username: { S: username },
       },
-      ProjectionExpression: "password",
+      ProjectionExpression: "password, userId",
     });
 
     const response = await docClient.send(command);
-    console.log(response);
-    if (!response.Item) {
+    if (!response.Item || !response.Item.password || !response.Item.userId) {
       console.log(
         "Invalid username and password combination for user: " + username
       );
-      return false;
+      return null;
     }
 
     const hashedPassword = response.Item.password.S;
+    const userId = response.Item.userId.S;
     const isPasswordRight = bcrypt.compareSync(password, hashedPassword);
 
     if (isPasswordRight) {
-      console.log("Valid password, logging in user: " + username);
-      return true;
+      console.log(
+        `Valid password, logging in user: ${username} with id: ${userId}`
+      );
+      return userId;
     }
 
     console.log("Invalid password for user: " + username);
-    return false;
+    return null;
   }
 
   /**
@@ -85,8 +87,15 @@ class UserRepository {
       ProjectionExpression: "username",
     });
 
-    const response = await docClient.send(command);
-    return response.Item?.username.S === username;
+    try {
+      const response = await docClient.send(command);
+      return response.Item?.username.S === username;
+    } catch (e) {
+      console.log(
+        `Error when checking for duplicate username: ${username}.  ${e}`
+      );
+      throw e;
+    }
   }
 }
 

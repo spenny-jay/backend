@@ -16,7 +16,7 @@ playerRouter.get("/player/:id", async (req: Request, res: Response) => {
 
     return res.send(player);
   } catch (e) {
-    return res.status(400).send({ msg: `Player ${id} not found` });
+    return res.status(400).send({ message: `Player ${id} not found` });
   }
 });
 
@@ -27,7 +27,7 @@ playerRouter.get("/:name", async (req: Request, res: Response) => {
     const players: NameModel[] = await playerRepo.getPlayerNames(playerName);
     return res.send(players);
   } catch (e) {
-    return res.status(400).send({ msg: "Could not find player " + e });
+    return res.status(400).send({ message: "Could not find player " + e });
   }
 });
 
