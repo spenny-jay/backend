@@ -1,10 +1,14 @@
-import { GetCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  BatchGetCommand,
+  GetCommand,
+  ScanCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { docClient, getPresignedURL } from "./AWSClients";
 import { NameModel } from "../models/responses/NameModel";
 import { PlayerModel } from "../models/responses/PlayerModel";
 import { StatsModel } from "../models/responses/StatsModel";
 
-const PLAYERS_TABLE = "qb_stats";
+const TABLE_NAME = "qb_stats";
 class PlayerRepository {
   constructor() {}
 
@@ -17,49 +21,14 @@ class PlayerRepository {
    */
   public async getPlayer(id: string): Promise<PlayerModel> {
     const command = new GetCommand({
-      TableName: PLAYERS_TABLE,
+      TableName: TABLE_NAME,
       Key: {
         Id: id,
       },
     });
     try {
       const response = await docClient.send(command);
-
-      // if a player was on multiple teams in on year,
-      // combine the stats into one year
-      let prevYear = 0;
-      const combinedStats: StatsModel[] = [];
-      response.Item.Stats.forEach((stat, i) => {
-        if (prevYear === stat.Year) {
-          let prevStats = combinedStats[i - 1];
-          prevStats.ATT = stat.ATT + prevStats.ATT;
-          prevStats.CMP = stat.CMP + prevStats.CMP;
-          prevStats.Team.push(stat.Team);
-          prevStats["CMP%"] = Number(
-            (prevStats.CMP / prevStats.ATT).toFixed(2)
-          );
-          prevStats.GP = stat.GP + prevStats.GP;
-          prevStats.YDS = stat.YDS + prevStats.YDS;
-          prevStats.INT = stat.INT + prevStats.INT;
-          prevStats.TD = stat.TD + prevStats.TD;
-          prevStats.SACK = stat.SACK + prevStats.SACK;
-          prevStats.AVG = Number((prevStats.YDS / prevStats.ATT).toFixed(2));
-          prevStats.LNG = Math.max(stat.LNG, prevStats.LNG);
-          prevStats.RTG = this.calculateRTG(prevStats);
-        } else {
-          stat.Team = [stat["Team"]];
-          combinedStats.push(stat);
-        }
-        prevYear = stat.Year;
-      });
-
-      const player: PlayerModel = {
-        CurrentTeam: response.Item["Current Team"],
-        Id: response.Item.Id,
-        ProfileUrl: await getPresignedURL(response.Item.Key),
-        Player: response.Item.Player,
-        Stats: combinedStats,
-      };
+      const player = await this.transformPlayerData(response.Item);
       return player;
     } catch (e) {
       throw e;
@@ -97,18 +66,95 @@ class PlayerRepository {
       .join(" ");
     const command = new ScanCommand({
       ProjectionExpression: "Player, Id",
-      TableName: PLAYERS_TABLE,
+      TableName: TABLE_NAME,
       FilterExpression: "contains(Player, :n)",
       ExpressionAttributeValues: {
         ":n": nameQuery,
       },
     });
+    try {
+      const response = await docClient.send(command);
+      return response.Items as Array<NameModel>;
+    } catch (e) {
+      throw e;
+    }
+  }
 
-    const response = await docClient.send(command);
-    return response.Items as Array<NameModel>;
+  /**
+   * Gets a series of player ids in a single batch and returns all of the
+   * retrieved player data
+   * @param playerIds Players to pull
+   * @returns Player data for all players mentioned in playerIds
+   */
+  public async getPlayers(playerIds: string[]): Promise<PlayerModel[]> {
+    const keys = playerIds.map((playerId) => {
+      return {
+        Id: playerId,
+      };
+    });
+
+    const command = new BatchGetCommand({
+      RequestItems: {
+        PLAYERS_TABLE: {
+          Keys: keys,
+        },
+      },
+    });
+
+    try {
+      const response = await docClient.send(command);
+      const rawStats = response.Responses?.qb_stats;
+      const playerStats: PlayerModel[] = await Promise.all(
+        rawStats.map(async (stat) => await this.transformPlayerData(stat))
+      );
+      return playerStats;
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  /**
+   * Used to transform received player data for the client (WIP - need to update data in player table)
+   * @param playerData player data to transform
+   * @returns transformed player data - specifically combines stats from the same year if the player was on multiple teams
+   */
+  async transformPlayerData(playerData): Promise<PlayerModel> {
+    // if a player was on multiple teams in on year,
+    // combine the stats into one year
+    let prevYear = 0;
+    const combinedStats: StatsModel[] = [];
+    playerData.Stats.forEach((stat, i) => {
+      if (prevYear === stat.Year) {
+        let prevStats = combinedStats[i - 1];
+        prevStats.ATT = stat.ATT + prevStats.ATT;
+        prevStats.CMP = stat.CMP + prevStats.CMP;
+        prevStats.Team.push(stat.Team);
+        prevStats["CMP%"] = Number((prevStats.CMP / prevStats.ATT).toFixed(2));
+        prevStats.GP = stat.GP + prevStats.GP;
+        prevStats.YDS = stat.YDS + prevStats.YDS;
+        prevStats.INT = stat.INT + prevStats.INT;
+        prevStats.TD = stat.TD + prevStats.TD;
+        prevStats.SACK = stat.SACK + prevStats.SACK;
+        prevStats.AVG = Number((prevStats.YDS / prevStats.ATT).toFixed(2));
+        prevStats.LNG = Math.max(stat.LNG, prevStats.LNG);
+        prevStats.RTG = this.calculateRTG(prevStats);
+      } else {
+        stat.Team = [stat["Team"]];
+        combinedStats.push(stat);
+      }
+      prevYear = stat.Year;
+    });
+
+    const player: PlayerModel = {
+      CurrentTeam: playerData["Current Team"],
+      Id: playerData.Id,
+      ProfileUrl: await getPresignedURL(playerData.Key),
+      Player: playerData.Player,
+      Stats: combinedStats,
+    };
+    return player;
   }
 }
 
-new PlayerRepository().getPlayer("595550d3-4845-442c-a6b2-cb7f8c0a5fdc");
-
-export default PlayerRepository;
+const playerRepo = new PlayerRepository();
+export default playerRepo;

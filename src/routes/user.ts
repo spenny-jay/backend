@@ -1,11 +1,16 @@
 import { Router, Request, Response } from "express";
 import { issueToken } from "../auth";
-import UserRepository from "../repositories/UserRepository.js";
+import userRepo from "../repositories/UserRepository.js";
 
 // set of routes related to user auth
 const router = Router();
-const userRepo = new UserRepository();
 
+/**
+ * Creates a new user and validates entered credentials, returns token upon success
+ * @body username
+ * @body password
+ * @returns token if signup is successful
+ */
 router.post("/signup", async (req: Request, res: Response) => {
   const username = req.body.username.trim() || "";
   const password = req.body.password.trim() || "";
@@ -16,7 +21,6 @@ router.post("/signup", async (req: Request, res: Response) => {
       message: "Invalid username, must be unique and at least 8 characters",
     });
   }
-
   const isPasswordValid = validatePassword(password);
   if (!isPasswordValid) {
     return res.status(400).send({
@@ -43,6 +47,12 @@ router.post("/signup", async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Receives user credentials and upon a successful validation, will return a token
+ * @body username
+ * @body password
+ * @returns token upon successful login
+ */
 router.post("/login", async (req: Request, res: Response) => {
   const username = req.body.username;
   const password = req.body.password;

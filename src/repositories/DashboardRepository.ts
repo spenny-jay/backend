@@ -1,12 +1,11 @@
 import { GetItemCommand, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { docClient } from "./AWSClients";
 import { DashboardNameModel } from "../models/responses/DashboardNameModel";
-import { PutCommand } from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "crypto";
+import { UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { DashboardRequest } from "../models/requests/DashboardRequest";
 import { DashboardModel } from "../models/responses/DashboardModel";
 
-const DASHBOARD_TABLE = "dashboards";
+const TABLE_NAME = "dashboards";
 class DashboardRepository {
   constructor() {}
 
@@ -19,7 +18,7 @@ class DashboardRepository {
     userId: string
   ): Promise<DashboardNameModel[]> {
     const command = new QueryCommand({
-      TableName: DASHBOARD_TABLE,
+      TableName: TABLE_NAME,
       IndexName: "userId-index",
       KeyConditionExpression: "userId = :userId",
       ProjectionExpression: "dashboardId, dashboardName",
@@ -30,18 +29,19 @@ class DashboardRepository {
       },
     });
 
-    const res = await docClient.send(command);
-    if (!res.Items && res.$metadata.httpStatusCode !== 200) {
-      console.log("Failure in dashboards table");
-      return null;
+    try {
+      const res = await docClient.send(command);
+
+      const dashboardNames = res.Items.map((dashboard) => {
+        return {
+          dashboardId: dashboard.dashboardId.S,
+          dashboardName: dashboard.dashboardName.S,
+        };
+      });
+      return dashboardNames;
+    } catch (e) {
+      throw e;
     }
-    console.log(res);
-    return res.Items.map((dashboard) => {
-      return {
-        dashboardId: dashboard.dashboardId.S,
-        dashboardName: dashboard.dashboardName.S,
-      };
-    });
   }
 
   /**
@@ -51,26 +51,25 @@ class DashboardRepository {
    */
   public async getDashboard(dashboardId: string): Promise<DashboardModel> {
     const command = new GetItemCommand({
-      TableName: DASHBOARD_TABLE,
+      TableName: TABLE_NAME,
       Key: {
         dashboardId: { S: dashboardId },
       },
     });
 
-    const res = await docClient.send(command);
-    if (!res.Item && res.$metadata.httpStatusCode !== 200) {
-      console.log("Failure in dashboards table");
-      return null;
+    try {
+      const res = await docClient.send(command);
+      return {
+        dashboardId: res.Item.dashboardId.S,
+        dashboardName: res.Item.dashboardName.S,
+        playerIds: res.Item.playerIds.L.map((attr) => attr.S),
+        startYear: +res.Item.startYear.N,
+        endYear: +res.Item.endYear.N,
+        statCategory: res.Item.statCategory.S,
+      };
+    } catch (e) {
+      throw e;
     }
-
-    return {
-      dashboardId: res.Item.dashboardId.S,
-      dashboardName: res.Item.dashboardName.S,
-      playerIds: res.Item.playerIds.SS,
-      startYear: +res.Item.startYear.N,
-      endYear: +res.Item.endYear.N,
-      statCategory: res.Item.statCategory.S,
-    };
   }
 
   /**
@@ -81,19 +80,49 @@ class DashboardRepository {
    */
   public async saveDashboard(
     dashboardRequest: DashboardRequest
-  ): Promise<boolean> {
-    const command = new PutCommand({
-      TableName: DASHBOARD_TABLE,
-      Item: { dashboardId: randomUUID(), ...dashboardRequest },
+  ): Promise<string> {
+    const command = new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { dashboardId: dashboardRequest.dashboardId },
+      UpdateExpression:
+        "SET dashboardName = :name, startYear = :startYear, endYear = :endYear, statCategory = :statCategory, playerIds = list_append(if_not_exists(playerIds, :emptyList), :playerIds)",
+      ExpressionAttributeValues: {
+        ":name": dashboardRequest.dashboardName,
+        ":startYear": dashboardRequest.startYear,
+        ":endYear": dashboardRequest.endYear,
+        ":statCategory": dashboardRequest.statCategory,
+        ":playerIds": dashboardRequest.playerIds,
+        ":emptyList": [],
+      },
     });
 
-    const res = await docClient.send(command);
-    if (res && res.$metadata.httpStatusCode !== 200) {
-      console.log("Error interfacing with the dashboards table");
-      return false;
+    try {
+      await docClient.send(command);
+      return dashboardRequest.dashboardId;
+    } catch (e) {
+      throw e;
     }
-    return true;
+  }
+
+  /**
+   * Deletes a given dashboard by its id
+   * @param dashboardId dashboard id to delete
+   */
+  public async deleteDashboard(dashboardId: string) {
+    const command = new DeleteCommand({
+      TableName: TABLE_NAME,
+      Key: {
+        dashboardId: dashboardId,
+      },
+    });
+
+    try {
+      await docClient.send(command);
+    } catch (e) {
+      throw e;
+    }
   }
 }
 
-export default DashboardRepository;
+const dashbaordRepo = new DashboardRepository();
+export default dashbaordRepo;

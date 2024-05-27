@@ -3,7 +3,7 @@ import { docClient } from "./AWSClients";
 import { PutItemCommand, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import bcrypt from "bcrypt";
 
-const USERS_TABLE = "users";
+const TABLE_NAME = "users";
 
 class UserRepository {
   constructor() {}
@@ -17,7 +17,7 @@ class UserRepository {
     try {
       const hashedPassword = await bcrypt.hash(password, 8);
       const command = new PutItemCommand({
-        TableName: USERS_TABLE,
+        TableName: TABLE_NAME,
         Item: {
           username: { S: username },
           password: { S: hashedPassword },
@@ -42,7 +42,7 @@ class UserRepository {
    */
   public async logIn(username: string, password: string): Promise<string> {
     const command = new GetItemCommand({
-      TableName: USERS_TABLE,
+      TableName: TABLE_NAME,
       Key: {
         username: { S: username },
       },
@@ -80,7 +80,7 @@ class UserRepository {
    */
   public async containsUser(username: string): Promise<Boolean> {
     const command = new GetItemCommand({
-      TableName: USERS_TABLE,
+      TableName: TABLE_NAME,
       Key: {
         username: { S: username },
       },
@@ -99,4 +99,5 @@ class UserRepository {
   }
 }
 
-export default UserRepository;
+const userRepo = new UserRepository();
+export default userRepo;

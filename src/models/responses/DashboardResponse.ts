@@ -3,7 +3,7 @@ import { PlayerModel } from "./PlayerModel";
 export type DashboardResponse = {
   dashboardName: string;
   dashboardId: string;
-  playerStats: PlayerModel[];
+  playerList: PlayerModel[];
   startYear: number;
   endYear: number;
   statCategory: string;
