@@ -29,14 +29,15 @@ export const issueToken = (username: string) => {
 export const auth = async (req: Request, res: Response, next: Next) => {
   try {
     const token = req.header("Authorization").replace("Bearer ", "");
+
     if (!token) {
-      res.status(401).send({ message: "No token provided" });
+      res.status(400).send({ message: "No token provided" });
       throw new Error();
     }
 
     jwt.verify(token, process.env.SECRET_KEY);
     next();
   } catch (e) {
-    res.status(401).send({ message: "Unable to authenticate" });
+    res.status(500).send({ message: "Unable to authenticate" });
   }
 };
