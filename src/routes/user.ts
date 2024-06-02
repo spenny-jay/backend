@@ -30,13 +30,13 @@ router.post("/signup", async (req: Request, res: Response) => {
   }
 
   try {
-    const hasSignedUp: boolean = await userRepo.signUp(username, password);
-    if (!hasSignedUp) {
+    const userId = await userRepo.signUp(username, password);
+    if (!userId) {
       return res
         .status(500)
         .send({ message: "Failed to interact with users table" });
     }
-    const token = issueToken(username);
+    const token = issueToken(userId);
     res.status(200).send({
       token: token,
     });
@@ -58,7 +58,7 @@ router.post("/login", async (req: Request, res: Response) => {
   const password = req.body.password;
   const userId: string = await userRepo.logIn(username, password);
   if (userId) {
-    const token = issueToken(username);
+    const token = issueToken(userId);
     return res.status(200).send({
       token: token,
       userId: userId,

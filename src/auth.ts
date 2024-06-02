@@ -7,9 +7,9 @@ import "dotenv/config";
  * @param username
  * @returns
  */
-export const issueToken = (username: string) => {
+export const issueToken = (userId: string) => {
   try {
-    const token = jwt.sign({ user: username }, process.env.SECRET_KEY, {
+    const token = jwt.sign({ userId: userId }, process.env.SECRET_KEY, {
       expiresIn: process.env.TOKEN_EXPIRATION,
     });
 
@@ -35,7 +35,8 @@ export const auth = async (req: Request, res: Response, next: Next) => {
       throw new Error();
     }
 
-    jwt.verify(token, process.env.SECRET_KEY);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    req.user = decoded.userId;
     next();
   } catch (e) {
     res.status(500).send({ message: "Unable to authenticate" });

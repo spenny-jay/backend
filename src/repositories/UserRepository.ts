@@ -13,24 +13,25 @@ class UserRepository {
    * @param userReq
    * @returns boolean whether the function successfully added a user
    */
-  public async signUp(username: string, password: string): Promise<boolean> {
+  public async signUp(username: string, password: string): Promise<string> {
     try {
       const hashedPassword = await bcrypt.hash(password, 8);
+      const userId = randomUUID();
       const command = new PutItemCommand({
         TableName: TABLE_NAME,
         Item: {
           username: { S: username },
           password: { S: hashedPassword },
-          userId: { S: randomUUID() },
+          userId: { S: userId },
         },
       });
 
       await docClient.send(command);
       console.log("Signed up user: " + username);
-      return true;
+      return userId;
     } catch (e) {
       console.log("Error encountered when signing up user: " + username);
-      return false;
+      return null;
     }
   }
 

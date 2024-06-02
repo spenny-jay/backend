@@ -79,19 +79,21 @@ class DashboardRepository {
    * @returns boolean whether the dashboard was successfully saved
    */
   public async saveDashboard(
-    dashboardRequest: DashboardRequest
+    dashboardRequest: DashboardRequest,
+    userId: string
   ): Promise<string> {
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { dashboardId: dashboardRequest.dashboardId },
       UpdateExpression:
-        "SET dashboardName = :name, startYear = :startYear, endYear = :endYear, statCategory = :statCategory, playerIds = list_append(if_not_exists(playerIds, :emptyList), :playerIds)",
+        "SET dashboardName = :name, userId = :userId, startYear = :startYear, endYear = :endYear, statCategory = :statCategory, playerIds = list_append(if_not_exists(playerIds, :emptyList), :playerIds)",
       ExpressionAttributeValues: {
         ":name": dashboardRequest.dashboardName,
         ":startYear": dashboardRequest.startYear,
         ":endYear": dashboardRequest.endYear,
         ":statCategory": dashboardRequest.statCategory,
         ":playerIds": dashboardRequest.playerIds,
+        ":userId": userId,
         ":emptyList": [],
       },
     });

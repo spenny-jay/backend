@@ -14,8 +14,8 @@ const dashboardRouter = Router();
  * @param userId: specifies whose dashboards to pull
  * @return list of the user's dashboard ids and names
  */
-dashboardRouter.get("/:userId", async (req: Request, res: Response) => {
-  const userId = req.params.userId || "";
+dashboardRouter.get("/", async (req: Request, res: Response) => {
+  const userId = req.user;
   try {
     const userDashboardNames: DashboardNameModel[] =
       await dashboardRepo.getUserDashboards(userId);
@@ -25,7 +25,7 @@ dashboardRouter.get("/:userId", async (req: Request, res: Response) => {
         message: `Error when retrieving dashboards for user: ${userId}`,
       });
     }
-    console.log(userDashboardNames);
+
     res.status(200).send({ dashboardNames: userDashboardNames });
   } catch (e) {
     res.status(500).send({
@@ -41,7 +41,7 @@ dashboardRouter.get("/:userId", async (req: Request, res: Response) => {
 dashboardRouter.get(
   "/dashboard/:dashboardId",
   async (req: Request, res: Response) => {
-    const dashboardId = req.params.dashboardId || "";
+    const dashboardId = req.params.dashboardId;
     try {
       const dashboardData: DashboardModel = await dashboardRepo.getDashboard(
         dashboardId
@@ -75,19 +75,19 @@ dashboardRouter.get(
  */
 dashboardRouter.post("/", async (req: Request, res: Response) => {
   const dashboardReq: DashboardRequest = req.body;
+  const userId = req.user;
   try {
-    const dashboardId = await dashboardRepo.saveDashboard(dashboardReq);
+    const dashboardId = await dashboardRepo.saveDashboard(dashboardReq, userId);
     if (!dashboardId) {
-      return res
-        .status(500)
-        .send(
-          `Failure interacting with the dashboards table with user id: ${dashboardReq.userId} and dashboard id ${dashboardReq.dashboardId}`
-        );
+      return res.status(500).send({
+        message: `Failure interacting with the dashboards table with user id: ${userId} and dashboard id ${dashboardReq.dashboardId}`,
+      });
     }
+
     return res.status(200).send({ dashboardId: dashboardId });
   } catch (e) {
     res.status(500).send({
-      message: `Error uploading dashboard with id: ${dashboardReq.userId} and dashboard id ${dashboardReq.dashboardId}`,
+      message: `Error uploading dashboard with for user id: ${userId} and dashboard id ${dashboardReq.dashboardId}`,
     });
   }
 });
