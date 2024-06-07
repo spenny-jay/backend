@@ -92,10 +92,9 @@ class PlayerRepository {
         Id: playerId,
       };
     });
-
     const command = new BatchGetCommand({
       RequestItems: {
-        PLAYERS_TABLE: {
+        qb_stats: {
           Keys: keys,
         },
       },
@@ -109,6 +108,7 @@ class PlayerRepository {
       );
       return playerStats;
     } catch (e) {
+      console.log(e);
       throw e;
     }
   }

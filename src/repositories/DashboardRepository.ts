@@ -4,6 +4,7 @@ import { DashboardNameModel } from "../models/responses/DashboardNameModel";
 import { UpdateCommand, DeleteCommand } from "@aws-sdk/lib-dynamodb";
 import { DashboardRequest } from "../models/requests/DashboardRequest";
 import { DashboardModel } from "../models/responses/DashboardModel";
+import { randomUUID } from "crypto";
 
 const TABLE_NAME = "dashboards";
 class DashboardRepository {
@@ -80,13 +81,15 @@ class DashboardRepository {
    */
   public async saveDashboard(
     dashboardRequest: DashboardRequest,
-    userId: string
+    userId: string,
+    dashboardId?: string
   ): Promise<string> {
+    if (!dashboardId) dashboardId = randomUUID();
     const command = new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: { dashboardId: dashboardRequest.dashboardId },
+      Key: { dashboardId: dashboardId },
       UpdateExpression:
-        "SET dashboardName = :name, userId = :userId, startYear = :startYear, endYear = :endYear, statCategory = :statCategory, playerIds = list_append(if_not_exists(playerIds, :emptyList), :playerIds)",
+        "SET dashboardName = :name, userId = :userId, startYear = :startYear, endYear = :endYear, statCategory = :statCategory, playerIds = :playerIds",
       ExpressionAttributeValues: {
         ":name": dashboardRequest.dashboardName,
         ":startYear": dashboardRequest.startYear,
@@ -94,15 +97,15 @@ class DashboardRepository {
         ":statCategory": dashboardRequest.statCategory,
         ":playerIds": dashboardRequest.playerIds,
         ":userId": userId,
-        ":emptyList": [],
       },
     });
 
     try {
       await docClient.send(command);
-      return dashboardRequest.dashboardId;
+      return dashboardId;
     } catch (e) {
-      throw e;
+      console.log(e);
+      return null;
     }
   }
 
