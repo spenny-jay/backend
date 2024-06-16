@@ -32,7 +32,7 @@
     "@types/node": "^20.12.7",
     "esbuild": "^0.21.1",
     "nodemon": "^3.1.0",
-    "swagger-ui-express": "^5.0.0",
+    "swagger-ui-express": "^5.0.1",
     "typescript": "^5.4.5"
   }
 }

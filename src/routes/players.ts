@@ -20,7 +20,7 @@ playerRouter.get("/player/:id", async (req: Request, res: Response) => {
 
     return res.send(player);
   } catch (e) {
-    return res.status(400).send({ message: `Player ${id} not found` });
+    return res.status(404).send({ message: `Player ${id} not found` });
   }
 });
 
@@ -38,7 +38,9 @@ playerRouter.get("/:name", async (req: Request, res: Response) => {
   } catch (e) {
     return res
       .status(400)
-      .send({ message: "Could not find player " + playerName });
+      .send({
+        message: "Error when pulling for player(s) with query " + playerName,
+      });
   }
 });
 

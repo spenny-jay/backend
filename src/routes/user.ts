@@ -54,20 +54,26 @@ router.post("/signup", async (req: Request, res: Response) => {
  * @returns token upon successful login
  */
 router.post("/login", async (req: Request, res: Response) => {
-  const username = req.body.username;
-  const password = req.body.password;
-  const userId: string = await userRepo.logIn(username, password);
-  if (userId) {
-    const token = issueToken(userId);
-    return res.status(200).send({
-      token: token,
-      userId: userId,
+  try {
+    const username = req.body.username;
+    const password = req.body.password;
+    const userId: string = await userRepo.logIn(username, password);
+    if (userId) {
+      const token = issueToken(userId);
+      return res.status(200).send({
+        token: token,
+        userId: userId,
+      });
+    }
+
+    res.status(400).send({
+      message: "Invalid username/password",
+    });
+  } catch (e) {
+    res.status(500).send({
+      message: "Error encountered on storage layer: " + e,
     });
   }
-
-  res.status(400).send({
-    message: "Invalid username/password",
-  });
 });
 
 /**

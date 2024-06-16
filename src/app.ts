@@ -2,6 +2,8 @@ import router from "./routes/index.js";
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
 
 dotenv.config({ path: `../.env` });
 
@@ -19,6 +21,35 @@ app.use(
 );
 
 app.use(router);
+
+const options = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "REST API Docs",
+      version: "1",
+    },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
+  },
+  apis: [`${__dirname}/routes/index.js`, `${__dirname}/models/responses/*`],
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
