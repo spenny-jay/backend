@@ -1,8 +1,9 @@
 // related to /api/players/player/:id
 export type StatsModel = {
+  Year: number;
+  Team: any;
   ATT: number;
   CMP: number;
-  Team: any;
   "CMP%": number;
   GP: number;
   INT: number;
@@ -12,5 +13,4 @@ export type StatsModel = {
   AVG: number;
   LNG: number;
   YDS: number;
-  Year: number;
 };

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
-import { issueToken } from "../auth";
+import { issueRefreshToken, issueToken, refreshTokenAuth } from "../auth";
 import userRepo from "../repositories/UserRepository.js";
+import { TokenExpiredError } from "jsonwebtoken";
 
 // set of routes related to user auth
 const router = Router();
@@ -37,8 +38,10 @@ router.post("/signup", async (req: Request, res: Response) => {
         .send({ message: "Failed to interact with users table" });
     }
     const token = issueToken(userId);
+    const refreshToken = issueRefreshToken(userId);
     res.status(200).send({
       token: token,
+      refreshToken: refreshToken,
     });
   } catch {
     res.status(500).send({
@@ -60,9 +63,10 @@ router.post("/login", async (req: Request, res: Response) => {
     const userId: string = await userRepo.logIn(username, password);
     if (userId) {
       const token = issueToken(userId);
+      const refreshToken = issueRefreshToken(userId);
       return res.status(200).send({
         token: token,
-        userId: userId,
+        refreshToken: refreshToken,
       });
     }
 
@@ -73,6 +77,25 @@ router.post("/login", async (req: Request, res: Response) => {
     res.status(500).send({
       message: "Error encountered on storage layer: " + e,
     });
+  }
+});
+
+router.get("/refresh", async (req: Request, res: Response) => {
+  try {
+    const token = req.header("Authorization").replace("Bearer ", "");
+    if (!token) {
+      return res.status(400).send({ message: "No refresh token provided." });
+    }
+
+    const newToken = refreshTokenAuth(token);
+    return res.status(200).send({ token: newToken });
+  } catch (e) {
+    if (e instanceof TokenExpiredError)
+      return res.status(403).send({ message: "Refresh token expired." });
+
+    return res
+      .status(500)
+      .send({ message: "Could not authenticate, internal server error" });
   }
 });
 
