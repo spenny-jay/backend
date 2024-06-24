@@ -20,5 +20,5 @@ There are 3 major routes, each containing their own set of endpoints
 This project is borderline abandoned, but there are a handful of things that I may continue to work on
 1) Incorporate HTTPS protocol
 2) Deploy on AWS ECS
-3) Swagger/Postman collection
+3) Swagger Documentation/Postman collection
 
